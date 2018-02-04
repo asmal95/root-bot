@@ -9,6 +9,12 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.client.AsyncRestTemplate;
 import org.springframework.web.client.RestTemplate;
+import ru.javazen.tgbot.rootbot.nlp.grapheme.impl.OpenNlpGraphemeAnalyzer;
+import ru.javazen.tgbot.rootbot.nlp.morphology.impl.JLanguageToolMorphologyAnalyzer;
+import ru.javazen.tgbot.rootbot.nlp.morphology.impl.OpenNlpMorphologyAnalyzer;
+import ru.javazen.tgbot.rootbot.nlp.util.Lemmatizer;
+
+import java.io.IOException;
 
 @Configuration
 public class Config {
@@ -50,4 +56,23 @@ public class Config {
         return objectMapper;
     }
 
+    @Bean("nlp.morphology.OpenNlpMorphologyAnalyzer")
+    public OpenNlpMorphologyAnalyzer openNlpMorphologyAnalyzer() throws IOException {
+        return new OpenNlpMorphologyAnalyzer(OpenNlpMorphologyAnalyzer.getDefaultModelRu());
+    }
+
+    @Bean("nlp.morphology.JLanguageToolMorphologyAnalyzer")
+    public JLanguageToolMorphologyAnalyzer jLanguageToolMorphologyAnalyzer() {
+        return new JLanguageToolMorphologyAnalyzer();
+    }
+
+    @Bean
+    public OpenNlpGraphemeAnalyzer openNlpGraphemeAnalyzer() throws IOException {
+        return new OpenNlpGraphemeAnalyzer(OpenNlpGraphemeAnalyzer.getDefaultModelRu());
+    }
+
+    @Bean
+    public Lemmatizer lemmatizer(OpenNlpMorphologyAnalyzer openNlpMorphologyAnalyzer, JLanguageToolMorphologyAnalyzer jLanguageToolMorphologyAnalyzer) {
+        return new Lemmatizer(jLanguageToolMorphologyAnalyzer, openNlpMorphologyAnalyzer);
+    }
 }
