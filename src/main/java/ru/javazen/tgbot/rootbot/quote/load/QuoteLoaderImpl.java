@@ -43,14 +43,6 @@ public class QuoteLoaderImpl implements QuoteLoader{
         return quoteResponse.getQuotes();
     }
 
-
-
-
-
-
-
-
-
     private class QuoteResponse implements ListenableFutureCallback<ResponseEntity<List<Quote>>> {
 
         private List<Quote> quotes;

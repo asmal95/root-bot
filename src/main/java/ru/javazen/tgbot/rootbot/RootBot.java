@@ -1,5 +1,6 @@
 package ru.javazen.tgbot.rootbot;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.ApiContextInitializer;
@@ -10,6 +11,8 @@ import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.exceptions.TelegramApiException;
 import org.telegram.telegrambots.exceptions.TelegramApiRequestException;
 import org.telegram.telegrambots.generics.BotSession;
+import ru.javazen.tgbot.rootbot.nlp.grapheme.GraphemeAnalyzer;
+import ru.javazen.tgbot.rootbot.nlp.util.Lemmatizer;
 import ru.javazen.tgbot.rootbot.quote.QuoteService;
 import ru.javazen.tgbot.rootbot.quote.entity.Quote;
 
@@ -17,6 +20,7 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 @Component
@@ -25,16 +29,33 @@ public class RootBot extends TelegramLongPollingBot {
     private String name;
     private String token;
     private BotSession session;
+
     private QuoteService quoteService;
+    private Lemmatizer lemmatizer;
+    private GraphemeAnalyzer graphemeAnalyzer;
+
+    @Autowired
+    public void setLemmatizer(Lemmatizer lemmatizer) {
+        this.lemmatizer = lemmatizer;
+    }
+
+    @Autowired
+    public void setGraphemeAnalyzer(GraphemeAnalyzer graphemeAnalyzer) {
+        this.graphemeAnalyzer = graphemeAnalyzer;
+    }
+
+    @Autowired
+    public void setQuoteService(QuoteService quoteService) {
+        this.quoteService = quoteService;
+    }
 
     static {
         ApiContextInitializer.init();
     }
 
-    public RootBot(@Value("${bot.name}") String name, @Value("${bot.token}") String token, QuoteService quoteService) {
+    public RootBot(@Value("${bot.name}") String name, @Value("${bot.token}") String token) {
         this.name = name;
         this.token = token;
-        this.quoteService = quoteService;
     }
 
     @Override
@@ -44,15 +65,15 @@ public class RootBot extends TelegramLongPollingBot {
             return;
         }
         String text = update.getMessage().getText();
-        String[] mess = text
-                .replace(",", " ")
-                .replace(".", " ")
-                .replace("!", " ")
-                .replace("?", " ")
-                .split(" ");
+        if (!text.contains("Сергей") && !text.contains("сергей")) {
+            return;
+        }
+
+        String[] words = graphemeAnalyzer.extractGraphemes(text);
 
         List<Quote> quotes = new ArrayList<>();
-        for (String s : mess) {
+        for (String s : words) {
+            s = lemmatizer.resolveLemma(s);
             List<Quote> quoteByTheme = quoteService.findQuoteByTheme(s);
             if (quoteByTheme != null) {
                 quotes.addAll(quoteByTheme);
@@ -61,7 +82,7 @@ public class RootBot extends TelegramLongPollingBot {
 
 
 
-        if (quotes != null && !quotes.isEmpty()) {
+        if (!quotes.isEmpty()) {
 
             Quote quote = quotes.get(new Random().nextInt(quotes.size()-1));
             SendMessage message = new SendMessage()
